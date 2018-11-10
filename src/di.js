@@ -1,19 +1,27 @@
 const context = {}
 let pending = []
 
-const deferPromise = () => {
-    let resolvePromise, rejectPromise
-    let promise = new Promise((resolve, reject) => {
-        resolvePromise = resolve
-        rejectPromise = reject
-    })
+class DeferredPromise {
+    constructor() {
+        let resolvePromise, rejectPromise
+        let promise = new Promise((resolve, reject) => {
+            resolvePromise = resolve
+            rejectPromise = reject
+        })
 
-    return {
-        resolve: resolvePromise,
-        reject: rejectPromise,
-        promise
+        this.resolve = resolvePromise
+        this.reject = rejectPromise
+        this.promise = promise
     }
 }
+
+const deferPromise = () => 
+    new DeferredPromise()
+
+const resolve = async component => 
+    context[component] instanceof DeferredPromise ?
+        await context[component].promise : 
+        context[component]
 
 module.exports = {
     define: (name, func) => {
@@ -23,12 +31,8 @@ module.exports = {
     boot: () => {
         console.log('Pending components:', pending)
 
-        let promises = {}
-        const resolve = name => 
-            promises[name]
-
         pending.forEach(([name, func]) => 
-            promises[name] = deferPromise()
+            context[name] = deferPromise()
         )
 
         pending.forEach(([name, func]) => {
@@ -37,13 +41,15 @@ module.exports = {
             func(resolve)
                 .then(component => {
                     console.log(`Resolved component ${name}`)
+                    context[name].resolve(component)
                     context[name] = component
-                    promises[name].resolve(component)
+
+                    console.log(context)
                 })
         })
 
-        prending = []
+        pending = []
     },
 
-    context
+    get: resolve
 }

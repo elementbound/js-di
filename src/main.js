@@ -7,6 +7,9 @@ const main = async () => {
     )
 
     di.boot()
+
+    let controller = await di.get('controller')
+    console.log(controller())
 }
 
 main()
